@@ -25,6 +25,7 @@ for col in label_columns:
     keys = data[col].sort_values().unique()
     values = np.arange(len(keys))
     le_encoders[col] = dict(zip(keys, values))
+    data[col] = [le_encoders[col][c] for c in data[col]]
 
 print(f"Value assigned for male in column gender: {le_encoders['gender']['male']}.")
 print(f"Value assigned for European/Caucasian-American in column race: {le_encoders['race']['European/Caucasian-American']}.")
@@ -47,4 +48,5 @@ for col in preference_scores_partner:
     data[col] = data[col] / data['total_o']
     print(f"Mean of {col}: {data[col].mean():.2f}.")
 
+data = data.drop(columns=['total', 'total_o'])
 data.to_csv(index=False, path_or_buf=sys.argv[2])
