@@ -1,45 +1,50 @@
-
 import pandas as pd
+import numpy as np
 
 
-def nbc(feature_cols, data, class_col, t_frac):
+def nbc(feature_cols, data, class_col, class_val, t_frac):
     training_sample = data.sample(frac=t_frac, random_state=47)
     prob_decision = training_sample.groupby([class_col])[class_col].count() / len(training_sample)
-    prob_attributes = {}
-    for col in feature_cols:
-        prob_attributes[col] = (training_sample.groupby([class_col, col])[class_col]
+    prob_attributes = np.empty((len(class_val), len(feature_cols)), dtype=object)
+
+    for ix, col in enumerate(feature_cols):
+        prob = (training_sample.groupby([class_col, col])[class_col]
                                 .count().unstack(fill_value=0).stack() + 1) / \
                                (training_sample.groupby([class_col])[class_col].count() +
                                 len(training_sample[col].sort_values().unique()))
+
+        for i_class in class_val:
+            prob_attributes[i_class][ix] = prob[i_class]
+
     return prob_decision, prob_attributes
 
 
-def get_class(d, classes_val, feature_cols, prob_decision, prob_attributes):
-    prob_prediction = {}
-    for val in classes_val:
-        prob_prediction[val] = prob_decision[val]
-        for col in feature_cols:
-            if d[col] in prob_attributes[col][val]:
-                prob_prediction[val] = prob_prediction[val] * prob_attributes[col][val][d[col]]
-    return prob_prediction
+def get_accuracy(data, class_col, classes_val, feature_cols, prob_decision, prob_attributes):
+    prob = np.ones((len(data), len(classes_val)))
 
+    # Multiply all class probabilities
+    for class_i, class_val in enumerate(classes_val):
+        prob[:, class_i] *= prob[:, class_i] * prob_decision[class_i]
 
-def get_accuracy(data, classes_val, feature_cols, prob_decision, prob_attributes):
-    correct_classified = 0
-    for i, x in data.iterrows():
-        prob_prediction = get_class(x, classes_val, feature_cols, prob_decision, prob_attributes)
-        correct_classified += 1 if max(prob_prediction, key=prob_prediction.get) == x['decision'] else 0
+    # Multiply all feature probabilities
+    for ix, col in enumerate(feature_cols):
+        for i_class in classes_val:
+            prob[:, i_class] *= data[col].map(prob_attributes[i_class][ix])
+
+    data["prediction"] = np.argmax(prob, axis=1)
+    correct_classified = data[data[class_col] == data['prediction']][class_col].count()
     return correct_classified/len(data)
 
 
 training_data = pd.read_csv("trainingSet.csv")
 features = [col for col in training_data.columns if col not in ['decision']]
-p_decision, p_attributes = nbc(features, training_data, 'decision', 1)
 classes = training_data['decision'].unique()
-accuracy_training = get_accuracy(training_data, classes, features, p_decision, p_attributes)
+# Learn probabilities
+p_decision, p_attributes = nbc(features, training_data, 'decision', classes, 1)
+# Test probabilities
+accuracy_training = get_accuracy(training_data, 'decision', classes, features, p_decision, p_attributes)
 print(f"Training Accuracy: {accuracy_training:.2f}")
 
 test_data = pd.read_csv("testSet.csv")
-accuracy_test = get_accuracy(test_data, classes, features, p_decision, p_attributes)
-
+accuracy_test = get_accuracy(test_data, 'decision', classes, features, p_decision, p_attributes)
 print(f"Testing Accuracy: {accuracy_test:.2f}")

@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 imp_var = __import__('5_1')
 
-data = pd.read_csv("dating.csv")
 range_min = {}
 range_max = {}
 
@@ -63,24 +62,28 @@ range_min['interests_correlate'], range_max['interests_correlate'] = -1, 1
 range_min['expected_happy_with_sd_people'], range_max['expected_happy_with_sd_people'] = 0, 10
 range_min['like'], range_max['like'] = 0, 10
 
+data = pd.read_csv("dating.csv")
 number_bins = [2, 5, 10, 50, 100, 200]
-accuracy_training = np.zeros(len(number_bins))
-accuracy_test = np.zeros(len(number_bins))
+accuracy_training = np.empty(len(number_bins))
+accuracy_test = np.empty(len(number_bins))
 
 for b, n_bins in enumerate(number_bins):
     data_binned = binning_data(data, range_min, range_max, n_bins)
     test_data = data_binned.sample(frac=0.2, random_state=47)
     training_data = data_binned.drop(test_data.index)
+
     features = [col for col in training_data.columns if col not in ['decision']]
     classes = training_data['decision'].unique()
-    p_decision, p_attributes = imp_var.nbc(features, training_data, 'decision', 1)
+    # Learn probabilities
+    p_decision, p_attributes = imp_var.nbc(features, training_data, 'decision', classes, 1)
+
+    # Test probabilities
     print(f"Bin size: {n_bins}")
+    accuracy_training[b] = imp_var.get_accuracy(training_data, 'decision', classes, features, p_decision, p_attributes)
+    print(f"Training Accuracy: {accuracy_training[b]}")
 
-    accuracy_training[b] = imp_var.get_accuracy(training_data, classes, features, p_decision, p_attributes)
-    print(f"Training Accuracy: {accuracy_training[b]:.2f}")
-
-    accuracy_test[b] = imp_var.get_accuracy(test_data, classes, features, p_decision, p_attributes)
-    print(f"Testing Accuracy: {accuracy_test[b]:.2f}")
+    accuracy_test[b] = imp_var.get_accuracy(test_data, 'decision', classes, features, p_decision, p_attributes)
+    print(f"Testing Accuracy: {accuracy_test[b]}")
 
 x = np.arange(len(number_bins))
 
