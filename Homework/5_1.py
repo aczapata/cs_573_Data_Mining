@@ -8,8 +8,7 @@ def nbc(feature_cols, data, class_col, class_val, t_frac):
     prob_attributes = np.empty((len(class_val), len(feature_cols)), dtype=object)
 
     for ix, col in enumerate(feature_cols):
-        prob = (training_sample.groupby([class_col, col])[class_col]
-                                .count().unstack(fill_value=0).stack() + 1) / \
+        prob = (training_sample.groupby([class_col, col])[class_col].count().unstack(fill_value=0).stack() + 1) / \
                                (training_sample.groupby([class_col])[class_col].count() +
                                 len(training_sample[col].sort_values().unique()))
 
@@ -36,15 +35,16 @@ def get_accuracy(data, class_col, classes_val, feature_cols, prob_decision, prob
     return correct_classified/len(data)
 
 
-training_data = pd.read_csv("trainingSet.csv")
-features = [col for col in training_data.columns if col not in ['decision']]
-classes = training_data['decision'].unique()
-# Learn probabilities
-p_decision, p_attributes = nbc(features, training_data, 'decision', classes, 1)
-# Test probabilities
-accuracy_training = get_accuracy(training_data, 'decision', classes, features, p_decision, p_attributes)
-print(f"Training Accuracy: {accuracy_training:.2f}")
+if __name__ == "__main__":
+    training_data = pd.read_csv("trainingSet.csv")
+    features = [col for col in training_data.columns if col not in ['decision']]
+    classes = training_data['decision'].unique()
+    # Learn probabilities
+    p_decision, p_attributes = nbc(features, training_data, 'decision', classes, 1)
+    # Test probabilities
+    accuracy_training = get_accuracy(training_data, 'decision', classes, features, p_decision, p_attributes)
+    print(f"Training Accuracy: {accuracy_training:.2f}")
 
-test_data = pd.read_csv("testSet.csv")
-accuracy_test = get_accuracy(test_data, 'decision', classes, features, p_decision, p_attributes)
-print(f"Testing Accuracy: {accuracy_test:.2f}")
+    test_data = pd.read_csv("testSet.csv")
+    accuracy_test = get_accuracy(test_data, 'decision', classes, features, p_decision, p_attributes)
+    print(f"Testing Accuracy: {accuracy_test:.2f}")

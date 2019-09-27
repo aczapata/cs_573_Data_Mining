@@ -3,35 +3,11 @@ import pandas as pd
 import sys
 
 
-def binning_data(data, range_min, range_max, nbins, printCount =False):
+def binning_data(data, nbins, print_count =False):
     binned_data = pd.DataFrame()
     categorical_columns = ['gender', 'race', 'race_o', 'samerace', 'field', 'decision']
     continuous_columns = [col for col in data.columns if col not in categorical_columns]
 
-    # Fit values within range
-    for col in continuous_columns:
-        min_col = range_min[col]
-        max_col = range_max[col]
-        data[col] = [min_col if c < min_col else c for c in data[col]]
-        data[col] = [max_col if c > max_col else c for c in data[col]]
-
-    # Create bins for continuous columns and keep categorical columns
-    for col in data.columns:
-        if col in continuous_columns:
-            min_col = range_min[col]
-            max_col = range_max[col]
-            bin_size = (max_col - min_col) / nbins
-            bins = np.arange(min_col, max_col + bin_size, bin_size)
-            binned_data[col] = pd.cut(data[col], bins, include_lowest=True)
-            if printCount:
-                print(f" {col}: {binned_data[col].value_counts(sort=False).values}")
-        else:
-            binned_data[col] = data[col]
-    return binned_data
-
-
-if __name__ == "__main__":
-    data = pd.read_csv(sys.argv[1])
     range_min = {}
     range_max = {}
 
@@ -90,6 +66,30 @@ if __name__ == "__main__":
     range_min['expected_happy_with_sd_people'], range_max['expected_happy_with_sd_people'] = 0, 10
     range_min['like'], range_max['like'] = 0, 10
 
-    data_binned = binning_data(data, range_min, range_max, 5, True)
+    # Fit values within range
+    for col in continuous_columns:
+        min_col = range_min[col]
+        max_col = range_max[col]
+        data[col] = [min_col if c < min_col else c for c in data[col]]
+        data[col] = [max_col if c > max_col else c for c in data[col]]
+
+    # Create bins for continuous columns and keep categorical columns
+    for col in data.columns:
+        if col in continuous_columns:
+            min_col = range_min[col]
+            max_col = range_max[col]
+            bin_size = (max_col - min_col) / nbins
+            bins = np.arange(min_col, max_col + bin_size, bin_size)
+            binned_data[col] = pd.cut(data[col], bins, include_lowest=True)
+            if print_count:
+                print(f" {col}: {binned_data[col].value_counts(sort=False).values}")
+        else:
+            binned_data[col] = data[col]
+    return binned_data
+
+
+if __name__ == "__main__":
+    data = pd.read_csv(sys.argv[1])
+    data_binned = binning_data(data, 5, True)
     data_binned.to_csv(index=False, path_or_buf=sys.argv[2])
 
